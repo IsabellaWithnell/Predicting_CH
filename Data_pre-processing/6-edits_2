@@ -17,7 +17,15 @@ dff3<- datafinal
 dff1<-readRDS("output_final_malig.rds")%>% 
   mutate(eid = as.character(eid)) 
 malig_ukbb<-left_join(dff3,dff1,by="eid")  
-colnames(malig_ukbb)
+
+malig_ukbb$Female_Medication_cholesterol <- ifelse(malig_ukbb$Medication_cholesterol_blood_pressure_diabetes_exogenous_hormones.0.0 =="Cholesterol lowering medication",1,0)
+
+malig_ukbb$Male_Medication_cholesterol <- ifelse(malig_ukbb$Medication_cholesterol_blood_pressure_diabetes.0.0 =="Cholesterol lowering medication",1,0)
+
+malig_ukbb$Medication_cholesterol <- with(malig_ukbb, +(!(Male_Medication_cholesterol == 0 & Female_Medication_cholesterol == 0)))
+
+malig_ukbb$Medication_cholesterol[is.na(malig_ukbb$Medication_cholesterol)] <- 0
+
 
 malig_ukbb$Time_since_last_menstrual_period.0.0
 malig_ukbb$Alcohol_intake_yesterday <- malig_ukbb$Alcohol_intake_yesterday.0.0
