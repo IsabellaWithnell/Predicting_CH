@@ -1,0 +1,9 @@
+
+var_names$Female_Medication_cholesterol <- ifelse(var_names$Medication_cholesterol_blood_pressure_diabetes_exogenous_hormones.0.0 =="Cholesterol lowering medication",1,0)
+
+table(var_names$Medication_cholesterol_blood_pressure_diabetes.0.0)
+var_names$Male_Medication_cholesterol <- ifelse(var_names$Medication_cholesterol_blood_pressure_diabetes.0.0 =="Cholesterol lowering medication",1,0)
+
+var_names$Medication_cholesterol <- with(var_names, +(!(Male_Medication_cholesterol == 0 & Female_Medication_cholesterol == 0)))
+
+var_names$Medication_cholesterol[is.na(var_names$Medication_cholesterol)] <- 0
