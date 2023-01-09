@@ -15,5 +15,4 @@ Steps involve: extracting variables from UK biobank, editing / renaming variable
 
 ### 2) Gene-stratified random forest script
 
-In here is the script used to train the gene-stratified random forest model for ASXL1 CH (large clone) prediction. Can be adjusted for each gene.
-
+In here is the script used to 1) train the gene-stratified random forest model for ASXL1 CH (large clone) prediction, can be adjusted for each gene, and 2) test the tuned model on the 25% of the dataset which was held out.
