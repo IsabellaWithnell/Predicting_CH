@@ -30,8 +30,6 @@ def get_results(truth, prediction, df, idx):
     
     y_test2 = truth.map({'No':0, 'Yes':1})
     y_pred2 = pd.Series(prediction).map({'No':0, 'Yes':1})
-
-
     acc = accuracy_score(y_test2, y_pred2)
     f1 = f1_score(y_test2, y_pred2)
     precision = precision_score(y_test2, y_pred2)
@@ -44,35 +42,16 @@ def get_results(truth, prediction, df, idx):
 ### load here the gene stratifiied dataset e.g. JAK2, ASXL1...
 df = pd.read_csv('/rds/general/user/iw413/home/Summerproject/outputs/python_geneaASXL1oct.csv')
 
-
-print (df)
-
 df.dtypes
-
 data = df
-
-
-data
-
 eid = data.iloc[:, :1]
-
-eid
-
-
 data = df.iloc[: , 1:]
-
-data
 
     
 for col in ['Smoking_status' , 'Batch' , 'Current_tobacco_smoking' ,
                 'Alcohol_intake_frequency'  , 'Time_since_last_menstrual_period' , 'Alcohol_drink_status'  ,'Sex']:
     data[col] = data[col].astype('category')
     
-print(data.dtypes)
-
-data
-
-print(data.dtypes) 
 
 X_train, X_test, y_train, y_test = train_test_split(data.iloc[:,:-1], data.iloc[:,-1], test_size=0.25, random_state=8)
 
@@ -80,7 +59,7 @@ X_train, X_test, y_train, y_test = train_test_split(data.iloc[:,:-1], data.iloc[
 
 
 
-## Set up results df
+## Set up results df --> only using random forest here
 
 results = pd.DataFrame(index = ['Decision Tree', 'Random Forest', 'Gradient Boost'], 
                        columns = ['accuracy', 'f1', 'precision', 'recall'])
@@ -125,6 +104,7 @@ parameters = {'max_features':['sqrt'], 'n_estimators':[80,90,100,110,120,130],
 
 rf_class = GridSearchCV(RandomForestClassifier(random_state = 8),
                         parameters, n_jobs=3)
+
 rf_class.fit(X=X_train, y=y_train)
 rf_model = rf_class.best_estimator_
 
@@ -132,10 +112,7 @@ y_pred = rf_model.predict(X_test)
 
 ## Convert strings to ints to work with accuracy score functions
 y_pred2 = pd.Series(y_pred).map({'No':0, 'Yes':1})
-
 results = get_results(y_test, y_pred, results, 'Random Forest')
-
-
 print('The best parameters are {}'.format(rf_class.best_params_))
 
 features = X_train.columns
