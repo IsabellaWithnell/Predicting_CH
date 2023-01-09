@@ -1,0 +1,60 @@
+#Create four XXX.sh files to submit to HPC
+
+#1: File below would be 1-make_data_dict.sh
+
+#PBS -l walltime=5:00:00
+#PBS -l select=1:ncpus=1:mem=20gb
+#PBS -N dict
+pwd
+cd /rds/general/user/iw413/home/Summerproject/Scripts
+
+module load anaconda3/personal
+
+ukb_path=/rds/general/project/chadeau_ukbb_folder/live/data/project_data/UKB_69328/basket_47946_14Sep21/ukb47946.csv
+
+Rscript 1-make_data_dict.R $ukb_path
+
+
+#2: File below would be 2-extract_selected.sh
+
+#PBS -l walltime=5:00:00
+#PBS -l select=1:ncpus=1:mem=40gb
+#PBS -N extraction
+#PBS -q med-bio
+
+cd /rds/general/user/iw413/home/Summerproject/Scripts
+module load anaconda3/personal
+
+ukb_path=/rds/general/project/chadeau_ukbb_folder/live/data/project_data/UKB_69328/basket_47946_14Sep21/ukb47946.csv
+Rscript 2-extract_selected.R $ukb_path 
+
+
+#3: File below would be 3-recode_extracted.sh
+
+#PBS -l walltime=5:00:00
+#PBS -l select=1:ncpus=1:mem=30gb
+#PBS -N recoding
+#PBS -q med-bio
+
+cd /rds/general/user/iw413/home/Summerproject/Scripts
+module load anaconda3/personal
+
+Rscript 3-recode_variables_new.R
+
+
+#4: File below would be 4-aggregate_arrays.sh
+
+#PBS -l walltime=5:00:00
+#PBS -l select=1:ncpus=1:mem=20gb
+#PBS -N aggregating
+#PBS -q med-bio
+
+cd  /rds/general/user/iw413/home/Summerproject/Scripts
+module load anaconda3/personal
+
+Rscript 4-aggregate_arrays.R
+
+
+
+
+
