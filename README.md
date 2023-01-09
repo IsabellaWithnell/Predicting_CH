@@ -1,4 +1,4 @@
-## Predicting gene stratified CH 
+## Predicting gene stratified CH with routine blood test information
 
 
 The scripts are arranged in two parts:
