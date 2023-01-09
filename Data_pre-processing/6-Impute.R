@@ -2,8 +2,9 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 
+#I created all of 1,2 and 3 below as separate scripts and submitted them separately to the HPC
 
-#Impute blood data
+#1: Impute blood data
 
 setwd("~/Summerproject/Descfriptive_analysis")
 datap <- readRDS("Blood_finalised_new_together_oct_edit_2.rds")
@@ -21,7 +22,7 @@ imputednew <- impute.knn(datap, k=10 , rowmax = 0.5, colmax = 0.8,maxp = 1500, r
 
 save(imputednew, file="imputation.Rda")
 
-#Impute covariates
+#2:Impute covariates
 
 setwd("~/Summerproject/Descfriptive_analysis")
 datap <- readRDS("Blood_finalised_new_together_oct_edit_2.rds")
@@ -41,7 +42,7 @@ imputedcov <- impute.knn(datap, k=10 , rowmax = 0.5, colmax = 0.8,maxp = 1500, r
 
 save(imputedcov, file="imputationcovariates.Rda")
 
-#No imputation variables
+#3: No imputation variables
 
 
 setwd("~/Summerproject/Descfriptive_analysis")
