@@ -1,4 +1,5 @@
 ### loading packages
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -97,6 +98,8 @@ X_test
 np.any(np.isnan(X_test))
 
 
+### optimizing the parameters for ASXL1 ML algorithm --> gives a test AUC of 0.76 for ASLX1 (optimized parameters: criiterion = gini, max_depth = 7, 
+### max_features= sqrt, min_samples_leaf = 8, n_estimators = 80
 
 parameters = {'max_features':['sqrt'], 'n_estimators':[80,90,100,110,120,130],
               'max_depth':range(7,8,9),'min_samples_leaf':[2,3,4,6,8], 
