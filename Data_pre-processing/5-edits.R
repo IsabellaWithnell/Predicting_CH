@@ -1,9 +1,14 @@
+rm(list=ls())
 library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(forcats)
 library(table1)
 library(tidyverse)
+conflict_prefer("rename", "dplyr")
+
+
+#### Code to clean the data. Includes other variables that were used for exploratory analysis (deleted here)
 
 setwd("/rds/general/user/iw413/home/Summerproject/outputs")
 data <- readRDS("ukb_recoded.rds")
@@ -17,15 +22,7 @@ dff3<- datafinal
 dff1<-readRDS("output_final_malig.rds")%>% 
   mutate(eid = as.character(eid)) 
 malig_ukbb<-left_join(dff3,dff1,by="eid")  
-
-malig_ukbb$Female_Medication_cholesterol <- ifelse(malig_ukbb$Medication_cholesterol_blood_pressure_diabetes_exogenous_hormones.0.0 =="Cholesterol lowering medication",1,0)
-
-malig_ukbb$Male_Medication_cholesterol <- ifelse(malig_ukbb$Medication_cholesterol_blood_pressure_diabetes.0.0 =="Cholesterol lowering medication",1,0)
-
-malig_ukbb$Medication_cholesterol <- with(malig_ukbb, +(!(Male_Medication_cholesterol == 0 & Female_Medication_cholesterol == 0)))
-
-malig_ukbb$Medication_cholesterol[is.na(malig_ukbb$Medication_cholesterol)] <- 0
-
+colnames(malig_ukbb)
 
 malig_ukbb$Time_since_last_menstrual_period.0.0
 malig_ukbb$Alcohol_intake_yesterday <- malig_ukbb$Alcohol_intake_yesterday.0.0
@@ -222,8 +219,6 @@ blood_data <- datafinal %>% dplyr::select(Medication_cholesterol, Alcohol_intake
 names(blood_data) = gsub(pattern = "_2.0.0*", replacement = "", x = names(blood_data))
 names(blood_data) = gsub(pattern = ".0.0*", replacement = "", x = names(blood_data))
 
-
-
 table(blood_data$Poultry_intake.0.0)
 table(blood_data$Beef_intake.0.0)
 table(blood_data$Pork_intake.0.0)
@@ -250,59 +245,81 @@ table(blood_data$Asbestos_workplace)
 table(blood_data$Diesel_exhaust_workplace)
 table(blood_data$Chemical_workplace)
 
-
 ## Select variables from George's paper
 Blood_final <- blood_data %>% dplyr::select(-Sexually_molested_child, -Menstruating_today)
 
+setwd("/rds/general/user/iw413/home/Summerproject/outputs")
 
 #Merge the datasets
 fam=read.table("/rds/general/project/chadeau_ukbb_folder/live/data/project_data/Genetics/ukb22418_c17_b0_v2_s488175.fam",he=F, strings=F)
+fam = fam[-1,]
+fam2=read.table("ukb22418_c1_b0_v2_s488248.fam",he=T, strings=F)
 warnings()
-
 setwd("/rds/general/user/iw413/home/Summerproject/outputs")
+ch=read.table("results_var_ch_all_allgenes_UKB.txt",he=T, strings=F) # read the new file that Pedro sent here
+fam2 <- fam2 %>% 
+  rename(
+    eid = X2039051)
+fam2$order <- row.names(fam2) 
+fam2$order <- as.integer(fam2$order)
+conflict_prefer("count", "dplyr")
+mergedchfam2 <- merge(x = fam2, y = ch, by = "eid", all.x = TRUE)
 
-ch=read.table("CH_complete_ukb500_Dragana_20220519.txt",he=T, strings=F) # read the new file that Pedro sent here
+## Investigating duplicates and deleting duplicates FOR NOW!
+##n_occur <- data.frame(table(mergedchfam2$eid))
+##view <- n_occur[n_occur$Freq > 2,]
+##view <- mergedchfam2[mergedchfam2$eid %in% n_occur$Var1[n_occur$Freq > 1],]
+##duplicated(view$eid)
+
+mergedchfam22 <- mergedchfam2[!duplicated(mergedchfam2$eid), ]
+ch2 <- mergedchfam22
+ch2 <- ch2[order(ch2$order, decreasing = FALSE),]  
 head(fam)
-head(ch)
+head(ch2)
 dim(fam) # should be the same dimension as below
-dim(ch)
-dat=cbind(fam,ch) # combine the two datasets
+dim(ch2)
+dat=cbind(fam,ch2) # combine the two datasets
 head(dat)
-
-table(dat$V5, dat$sex) # cross-check that most sex data is the same
-
+table(dat$V5, dat$X1) # cross-check that most sex data is the same
 Blood_finalised <- merge(Blood_final, dat, by.x="eid", by.y="V1")
 
 ##Delete variables from CH dataset
 
-Blood_finalised <- Blood_finalised %>% dplyr::select(-V2, -V3, -V4, -V5, -V6, -eid.y) 
+Blood_finalised <- Blood_finalised %>% dplyr::select(-X2039051.1, -X0, -X0.1, -X1, -order, -ukb_id, -chr, -pos, -ref_allele, -alt_allele, -mutect2_filt,
+                                                     -consequence, -transcript, - alt_ad, -ref_ad, -V2, -V3, -V4, -V5, -V6, -cds_position, -protein_position, -amino_acids,
+                                                     -codons, -c_mut, -p_mut, -hgvsp, -hgvsc, -exon, -variant_class, -impact, -existing_variation)
 
 ##Make factors
 
-Blood_finalised$sex <- as.factor(Blood_finalised$sex)
-
+Blood_finalised$Sex <- as.factor(Blood_finalised$Sex)
 Blood_finalised$symbol <- as.factor(Blood_finalised$symbol)
 
-Blood_finalised$consequence <- as.factor(Blood_finalised$consequence)
-
-Blood_finalised$clone <- as.factor(Blood_finalised$clone)
-
 ##Remove those with no age
+Blood_finalised <- Blood_finalised %>% mutate(age = 2023 - Blood_finalised$YOB)
 Blood_finalised <- Blood_finalised[!is.na(Blood_finalised$age), ]
 
-##0 for CH and others
-Blood_finalised$CH[is.na(Blood_finalised$CH)] = 0
-Blood_finalised$vaf[is.na(Blood_finalised$vaf)] = 0
+##Defining large clone variable
+Blood_finalised$largeclone01 <- ifelse(Blood_finalised$vaf >= 0.1, "large_clone" , Blood_finalised$vaf)
+Blood_finalised$largeclone01 <- ifelse(Blood_finalised$vaf < 0.1, "small_clone" , Blood_finalised$largeclone01)
+Blood_finalised$largeclone01[is.na(Blood_finalised$largeclone01)] = "no_mutation"
 
-Blood_finalised<- Blood_finalised %>% mutate( 
-  symbol = fct_explicit_na(symbol, "No_mutation"),
-  consequence = fct_explicit_na(consequence, "No_mutation"),
-  clone = fct_explicit_na(clone, "No_mutation")
-)
+##Defining large clone variable
+Blood_finalised$largeclone015 <- ifelse(Blood_finalised$vaf >= 0.15, "large_clone" , Blood_finalised$vaf)
+Blood_finalised$largeclone015 <- ifelse(Blood_finalised$vaf < 0.15, "small_clone" , Blood_finalised$largeclone01)
+Blood_finalised$largeclone015[is.na(Blood_finalised$largeclone015)] = "no_mutation"
 
+##Defining very large clone variable
+Blood_finalised$largeclone02 <- ifelse(Blood_finalised$vaf >= 0.2, " large_clone" , Blood_finalised$vaf)
+Blood_finalised$largeclone02 <- ifelse(Blood_finalised$vaf < 0.2, "small_clone" , Blood_finalised$largeclone02)
+Blood_finalised$largeclone02[is.na(Blood_finalised$largeclone02)] = "no_mutation"
+
+##Defining clone variable
+Blood_finalised$clone <- ifelse(Blood_finalised$vaf > 0.0, "clone" , Blood_finalised$vaf)
+Blood_finalised$clone[is.na(Blood_finalised$clone)] = "no_mutation"
 Blood_finaliseds <- Blood_finalised
 
 levels(Blood_finaliseds$Ever_addicted_alcohol)
+
 Blood_finaliseds<- Blood_finalised %>%mutate(Ethnicity= recode(Ethnicity,
                                                                "Prefer not to answer"="Unknown",
                                                                "Do not know"="Unknown",
@@ -550,11 +567,6 @@ Blood_finaliseds$Ever_suicide <- as.factor(Blood_finaliseds$Ever_suicide)
 
 Blood_finaliseds$Had_menopause[is.na(Blood_finaliseds$Had_menopause)] <- "No"
 
-
-Blood_finaliseds$Menstruating_today <- as.character(Blood_finaliseds$Menstruating_today)
-Blood_finaliseds$Menstruating_today[is.na(Blood_finaliseds$Menstruating_today)] <- "No/Unknown"
-Blood_finaliseds$Menstruating_today <- as.factor(Blood_finaliseds$Menstruating_today)
-
 Blood_finaliseds$Ethnicity[is.na(Blood_finaliseds$Ethnicity)] <- "Unknown"
 
 Blood_finaliseds$Smoking_status <- as.character(Blood_finaliseds$Smoking_status)
@@ -565,9 +577,8 @@ Blood_finaliseds$Usual_walking_pace <- as.character(Blood_finaliseds$Usual_walki
 Blood_finaliseds$Usual_walking_pace[is.na(Blood_finaliseds$Usual_walking_pace)] <- "Unknown"
 Blood_finaliseds$Usual_walking_pace <- as.factor(Blood_finaliseds$Usual_walking_pace)
 
-
-Blood_finaliseds$CH <- as.factor(Blood_finaliseds$CH)
-Blood_finaliseds$batch <- as.factor(Blood_finaliseds$batch)
+Blood_finaliseds$Batch_b001 <- as.factor(Blood_finaliseds$Batch_b001)
+(levels(Blood_finaliseds$Batch_b001))
 Blood_finaliseds$Medication_cholesterol <- as.factor(Blood_finaliseds$Medication_cholesterol)
 
 colnames(Blood_finaliseds)
@@ -600,30 +611,29 @@ Blood_finalised  <- rename(Blood_finaliseds,
 
 colnames(Blood_finalised)
 
-Blood_finalised <- Blood_finalised %>% dplyr::select( -No_cancers, -vaf, -p_mut, -consequence,
-                                                       -Sex, -YOB, -Thrombocyte_volume,
-                                                       -Basophill_count, -Lymphocyte_percentage, -Monocyte_percentage,
-                                                       -Neutrophill_percentage, -Eosinophill_percentage, -Basophill_percentage,
-                                                       -Nucleated_red_blood_cell_percentage, -Reticulocyte_percentage,
-                                                       -Mean_reticulocyte_volume, -Mean_sphered_cell_volume, -Immature_reticulocyte_fraction,
-                                                       -High_light_scatter_reticulocyte_percentage,
-                                                       -Nap_during_day, -Chest_pain_or_discomfort, -Cough_most_days,
-                                                       -Chemical_workplace, -Diesel_exhaust_workplace,
-                                                       -Asbestos_workplace, -Paint_glue_thinner_workplace,
-                                                       -Pesticide_workplace,-Dusty_workplace,
-                                                       -Noisy_workplace, -Able_to_confide, -Miserableness,
-                                                       -Frequency_of_depressed_mood_in_last_2_weeks, -Risk_taking, -Facial_ageing,
-                                                       -Skin_colour, -Salt_added_to_food, -Lamb_mutton_intake,
-                                                       -Pork_intake, -Beef_intake, -Poultry_intake, -Oily_fish_intake, 
-                                                       -Length_of_mobile_phone_use, -CYS, -PHOS,
-                                                       -AST, -HBAIC, -APOA, -APOB, -LDLD, -HDL, -CHOL,
-                                                       -Alcohol_consumed, -Alcohol_intake_yesterday, 
-                                                       -Medication_cholesterol, -UK_Biobank_assessment_centre,
-                                                       -Usual_walking_pace, -Processed_meat_intake, -Maternal_smoking_around_birth,
-                                                       -Use_of_sun_uv_protection, -Frequency_of_other_exercises_in_last_4_weeks,
-                                                       -War_exposure, -Ever_suicide, -Ever_addicted_alcohol, -Ethnicity,
-                                                       -Mood_swings)
-
+Blood_finalised <- Blood_finalised %>% dplyr::select( -No_cancers, -vaf,
+                                                      -YOB, -Thrombocyte_volume,
+                                                      -Basophill_count, -Lymphocyte_percentage, -Monocyte_percentage,
+                                                      -Neutrophill_percentage, -Eosinophill_percentage, -Basophill_percentage,
+                                                      -Nucleated_red_blood_cell_percentage, -Reticulocyte_percentage,
+                                                      -Mean_reticulocyte_volume, -Mean_sphered_cell_volume, -Immature_reticulocyte_fraction,
+                                                      -High_light_scatter_reticulocyte_percentage,
+                                                      -Nap_during_day, -Chest_pain_or_discomfort, -Cough_most_days,
+                                                      -Chemical_workplace, -Diesel_exhaust_workplace,
+                                                      -Asbestos_workplace, -Paint_glue_thinner_workplace,
+                                                      -Pesticide_workplace,-Dusty_workplace,
+                                                      -Noisy_workplace, -Able_to_confide, -Miserableness,
+                                                      -Frequency_of_depressed_mood_in_last_2_weeks, -Risk_taking, -Facial_ageing,
+                                                      -Skin_colour, -Salt_added_to_food, -Lamb_mutton_intake,
+                                                      -Pork_intake, -Beef_intake, -Poultry_intake, -Oily_fish_intake, 
+                                                      -Length_of_mobile_phone_use, -CYS, -PHOS,
+                                                      -AST, -HBAIC, -APOA, -APOB, -LDLD, -HDL, -CHOL,
+                                                      -Alcohol_consumed, -Alcohol_intake_yesterday, 
+                                                      -Medication_cholesterol, -UK_Biobank_assessment_centre,
+                                                      -Usual_walking_pace, -Processed_meat_intake, -Maternal_smoking_around_birth,
+                                                      -Use_of_sun_uv_protection, -Frequency_of_other_exercises_in_last_4_weeks,
+                                                      -War_exposure, -Ever_suicide, -Ever_addicted_alcohol, -Ethnicity,
+                                                      -Mood_swings, -eid.y, -gene)
 
 Blood_finalised <- Blood_finalised[!with(Blood_finalised,is.na(WBC)& is.na(RBC)& is.na(HT)& is.na(MCV)& is.na(RDW)&is.na(PLT)&is.na(PCT)&is.na(PDW)&is.na(LY)& 
                                            is.na(MO)& is.na(NE)& is.na(EO)& is.na(RET)& is.na(HLR)& is.na(HGB)),]
@@ -631,10 +641,6 @@ Blood_finalised <- Blood_finalised[!with(Blood_finalised,is.na(WBC)& is.na(RBC)&
 Blood_finalised$Had_menopause <- as.character(Blood_finalised$Had_menopause)
 Blood_finalised$Had_menopause[is.na(Blood_finalised$Had_menopause)] <- "Male"
 Blood_finalised$Had_menopause <- as.factor(Blood_finalised$Had_menopause)
-
-Blood_finalised$Alcohol_consumed <- as.character(Blood_finalised$Alcohol_consumed)
-Blood_finalised$Alcohol_consumed[is.na(Blood_finalised$Alcohol_consumed)] <- "Unknown"
-Blood_finalised$Alcohol_consumed <- as.factor(Blood_finalised$Alcohol_consumed)
 
 Blood_finalised$Alcohol_intake_frequency.[is.na(Blood_finalised$Alcohol_intake_frequency.)] <- "Unknown"
 Blood_finalised$Alcohol_drink_status[is.na(Blood_finalised$Alcohol_drink_status)] <- "Unknown"
@@ -661,8 +667,8 @@ result <- cts_dataset_cleanup %>% mutate(BMI = ifelse(BMI<range_valid$BMI[1] | B
 
 data <- cbind(result,Blood_finalised %>% dplyr::select(-(continuous_data)))
 Blood_finalised <-  data                                                     
-
+Blood_finalised$eid <- as.factor(Blood_finalised$eid)
 
 
 colnames(Blood_finalised)
-saveRDS(Blood_finalised, file = "Blood_finalised_new_together_oct_edit_2.rds")
+saveRDS(Blood_finalised, file = "January_blood_dataset.rds")
