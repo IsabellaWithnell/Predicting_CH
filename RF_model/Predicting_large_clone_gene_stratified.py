@@ -40,6 +40,21 @@ from sklearn import metrics
 
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, roc_auc_score, roc_curve, f1_score
 
+def get_results(truth, prediction, df, idx):
+    
+    y_test2 = truth.map({'No':0, 'Yes':1})
+    y_pred2 = pd.Series(prediction).map({'No':0, 'Yes':1})
+
+
+    acc = accuracy_score(y_test2, y_pred2)
+    f1 = f1_score(y_test2, y_pred2)
+    precision = precision_score(y_test2, y_pred2)
+    recall = recall_score(y_test2, y_pred2)
+
+    df.loc[idx,:] = [acc, f1, precision, recall]
+
+    return df
+
 df1 = pd.read_csv('/rds/general/user/iw413/home/Summerproject/outputs/JanDNMT3Alargeclone01.csv')
 df2 = pd.read_csv('/rds/general/user/iw413/home/Summerproject/outputs/JanASXL1largeclone01.csv')
 df3 = pd.read_csv('/rds/general/user/iw413/home/Summerproject/outputs/JanATMlargeclone01.csv')
