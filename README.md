@@ -1,4 +1,4 @@
-## Predicting gene stratified CH (large clone) with routine blood test information
+## Predicting gene stratified CH with routine blood test information
 
 
 The scripts are arranged in two parts:
