@@ -7,7 +7,6 @@ library(table1)
 library(tidyverse)
 conflict_prefer("rename", "dplyr")
 
-
 #### Code to clean the data. Includes other variables that were used for exploratory analysis (deleted here)
 
 setwd("/rds/general/user/iw413/home/Summerproject/outputs")
@@ -262,26 +261,36 @@ fam2 <- fam2 %>%
     eid = X2039051)
 fam2$order <- row.names(fam2) 
 fam2$order <- as.integer(fam2$order)
-conflict_prefer("count", "dplyr")
-mergedchfam2 <- merge(x = fam2, y = ch, by = "eid", all.x = TRUE)
 
+mergedchfam2 <- merge(x = fam2, y = ch, by = "eid", all.x = TRUE)
+ 
 ## Investigating duplicates and deleting duplicates FOR NOW!
-##n_occur <- data.frame(table(mergedchfam2$eid))
-##view <- n_occur[n_occur$Freq > 2,]
-##view <- mergedchfam2[mergedchfam2$eid %in% n_occur$Var1[n_occur$Freq > 1],]
-##duplicated(view$eid)
+n_occur <- data.frame(table(mergedchfam2$eid))
+
+view <- mergedchfam2[mergedchfam2$eid %in% n_occur$Var1[n_occur$Freq > 1],]
+
+mergedchfam2$eid <- as.factor(mergedchfam2$eid)
+length(unique((view$eid)))
 
 mergedchfam22 <- mergedchfam2[!duplicated(mergedchfam2$eid), ]
+
+
 ch2 <- mergedchfam22
 ch2 <- ch2[order(ch2$order, decreasing = FALSE),]  
 head(fam)
+
+
 head(ch2)
 dim(fam) # should be the same dimension as below
 dim(ch2)
 dat=cbind(fam,ch2) # combine the two datasets
 head(dat)
 table(dat$V5, dat$X1) # cross-check that most sex data is the same
+
+
 Blood_finalised <- merge(Blood_final, dat, by.x="eid", by.y="V1")
+
+Blood_finalised <- Blood_finalised[!Blood_finalised$eid.y %in% view$eid, ]
 
 ##Delete variables from CH dataset
 
@@ -611,6 +620,10 @@ Blood_finalised  <- rename(Blood_finaliseds,
 
 colnames(Blood_finalised)
 
+setwd("/rds/general/user/iw413/home/Summerproject/Dataprep")
+
+saveRDS(Blood_finalised, file = "Jan_dataset_with_environmental_variables_no_multiple_CH.rds")
+
 Blood_finalised <- Blood_finalised %>% dplyr::select( -No_cancers, -vaf,
                                                       -YOB, -Thrombocyte_volume,
                                                       -Basophill_count, -Lymphocyte_percentage, -Monocyte_percentage,
@@ -671,4 +684,8 @@ Blood_finalised$eid <- as.factor(Blood_finalised$eid)
 
 
 colnames(Blood_finalised)
-saveRDS(Blood_finalised, file = "January_blood_dataset.rds")
+setwd("/rds/general/user/iw413/home/Summerproject/Dataprep")
+
+saveRDS(Blood_finalised, file = "January_blood_dataset_no_multiple_CH.rds")
+
+table(check$symbol)
