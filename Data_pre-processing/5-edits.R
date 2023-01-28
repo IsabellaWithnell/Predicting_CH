@@ -23,6 +23,9 @@ dff1<-readRDS("output_final_malig.rds")%>%
 malig_ukbb<-left_join(dff3,dff1,by="eid")  
 colnames(malig_ukbb)
 
+
+
+
 malig_ukbb$Time_since_last_menstrual_period.0.0
 malig_ukbb$Alcohol_intake_yesterday <- malig_ukbb$Alcohol_intake_yesterday.0.0
 
@@ -252,7 +255,7 @@ setwd("/rds/general/user/iw413/home/Summerproject/outputs")
 #Merge the datasets
 fam=read.table("/rds/general/project/chadeau_ukbb_folder/live/data/project_data/Genetics/ukb22418_c17_b0_v2_s488175.fam",he=F, strings=F)
 fam = fam[-1,]
-fam2=read.table("ukb22418_c1_b0_v2_s488248.fam",he=T, strings=F)
+fam2=read.table("ukb22418_c1_b0_v2_s488248.fam",he=T, strings=F) #488376 --> people I assume have exome sequencing?
 warnings()
 setwd("/rds/general/user/iw413/home/Summerproject/outputs")
 ch=read.table("results_var_ch_all_allgenes_UKB.txt",he=T, strings=F) # read the new file that Pedro sent here
@@ -262,9 +265,14 @@ fam2 <- fam2 %>%
 fam2$order <- row.names(fam2) 
 fam2$order <- as.integer(fam2$order)
 
+## Merging george's UKBiobank information with their fam file --> So create whole UK biobank file here
 mergedchfam2 <- merge(x = fam2, y = ch, by = "eid", all.x = TRUE)
- 
-## Investigating duplicates and deleting duplicates FOR NOW!
+
+length(which(ch$eid %in% fam2$eid == TRUE)) ## 31 EIDs not overlapping
+
+## Drop redacted
+
+ ## Investigating duplicates and deleting duplicates FOR NOW! --> So EIDs line up properly (keeps only 1 of the entries for those with multiple clones)
 n_occur <- data.frame(table(mergedchfam2$eid))
 
 view <- mergedchfam2[mergedchfam2$eid %in% n_occur$Var1[n_occur$Freq > 1],]
@@ -274,23 +282,56 @@ length(unique((view$eid)))
 
 mergedchfam22 <- mergedchfam2[!duplicated(mergedchfam2$eid), ]
 
-
 ch2 <- mergedchfam22
 ch2 <- ch2[order(ch2$order, decreasing = FALSE),]  
-head(fam)
 
-
-head(ch2)
 dim(fam) # should be the same dimension as below
 dim(ch2)
+
+#Join Georges data and Marcs UK Biobank ID column --> different IDs but same order
 dat=cbind(fam,ch2) # combine the two datasets
 head(dat)
 table(dat$V5, dat$X1) # cross-check that most sex data is the same
 
-
+#Merge our selected variables with the bloods (the V1 from marcs fam file is now in georges dataset and this can join the two, the EID from View is the eid in 
+#fam1, which is the same as X2039051). Contains EID of 1 of the entries of those duplicate
 Blood_finalised <- merge(Blood_final, dat, by.x="eid", by.y="V1")
 
+(sum((Blood_final$eid %in% dat$V1) == FALSE)) #From 500240 participants, dropping 14,210 that do not match EIDs with Marc FAM file/ George Blood dataset
+
+#Check how which eids are the ones that were duplicated in blood_finalized: this has EID of View and EID for the whole uk biobank variable dataset
+check <- Blood_finalised[Blood_finalised$X2039051.1 %in% view$eid, ]
+
+#In total there are 3525 eid entries for these participlants
+check2 <- merge(check, view, by.x="eid.y", by.y="eid")
+
+library(dplyr) 
+names(check2) <- sub('\\.x$', '', names(check2))
+
+check2 <- check2%>% dplyr::select(-X2039051.1, -X0, -X0.1, -X1, -Batch_b001, - order, -ukb_id, -chr, -pos, -ref_allele, -alt_allele, -mutect2_filt,
+                                  -ref_ad, -alt_ad, -vaf, -gene, -transcript, -consequence, -cds_position, -protein_position, -amino_acids , -codons, 
+                                  -existing_variation, -impact, -variant_class, -symbol, -exon, -hgvsc, -hgvsp, -p_mut, -c_mut)
+
+check2 <- check2 %>% 
+  rename(
+    eid.temp = eid.y)
+    
+names(check2) <- gsub(".y", "", names(check2), fixed = TRUE)
+
+check2 <- check2 %>% 
+  rename(
+    eid.y = eid.temp)
+
+# delete ones which have a duplicate in blood_finalised --> so they can all be added
+
 Blood_finalised <- Blood_finalised[!Blood_finalised$eid.y %in% view$eid, ]
+
+# add all duplicates
+
+##To create dataset with those with multiple CH use the blood_finalised below
+
+Blood_finalised <- rbind(Blood_finalised, check2) 
+
 
 ##Delete variables from CH dataset
 
@@ -624,6 +665,9 @@ setwd("/rds/general/user/iw413/home/Summerproject/Dataprep")
 
 saveRDS(Blood_finalised, file = "Jan_dataset_with_environmental_variables_no_multiple_CH.rds")
 
+#FOR MULTIPLE CLONED PEOPLE : saveRDS(Blood_finalised, file = "Jan_dataset_with_environmental_variables_with_multiple_CH.rds")
+
+
 Blood_finalised <- Blood_finalised %>% dplyr::select( -No_cancers, -vaf,
                                                       -YOB, -Thrombocyte_volume,
                                                       -Basophill_count, -Lymphocyte_percentage, -Monocyte_percentage,
@@ -687,5 +731,11 @@ colnames(Blood_finalised)
 setwd("/rds/general/user/iw413/home/Summerproject/Dataprep")
 
 saveRDS(Blood_finalised, file = "January_blood_dataset_no_multiple_CH.rds")
+
+#FOR MULTIPLE CLONED PEOPLE : saveRDS(Blood_finalised, file = "January_blood_dataset_with_multiple_CH.rds")
+
+
+
+getwd()
 
 table(check$symbol)
