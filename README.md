@@ -17,4 +17,3 @@ Steps involve: extracting variables from UK biobank, editing / renaming variable
 
 In here is the script used to 1) train the gene-stratified random forest model for CH (large clone defined as VAF > 0.1) prediction, and 2) test the tuned model on the 25% of the dataset which was held out.
 
-ML models for CH (all size) and the lasso models to be added!
